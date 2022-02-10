@@ -1,0 +1,491 @@
+#!/usr/bin/python3
+
+import json
+import time
+import threading
+import npyscreen
+from os import system, name
+import paho.mqtt.client as mqtt
+
+
+import pyperclip
+
+
+import curses
+import npyscreen.wgwidget   as widget
+import npyscreen.wgtextbox  as textbox
+
+
+
+
+
+class ComplexColumnGrid(widget.Widget):
+    _contained_widgets    = textbox.Textfield
+    default_column_number = 4
+    additional_y_offset   = 0
+    additional_x_offset   = 0
+    def __init__(self, screen, columns = None, 
+            column_width = None, col_margin=1, row_height = 1, 
+            values = None,
+            always_show_cursor = False,
+            select_whole_line = False,
+            columns_widths = None,
+            **keywords):
+        super(ComplexColumnGrid, self).__init__(screen, **keywords)
+        self.col_margin = col_margin
+        self.always_show_cursor = always_show_cursor
+        self.columns_requested = columns
+        self.column_width_requested = column_width
+        self.row_height = row_height
+        self.columns_widths = columns_widths
+        self.make_contained_widgets()
+        
+        self.begin_row_display_at = 0
+        self.begin_col_display_at = 0
+        self.on_empty_display = ''
+        self.select_whole_line = select_whole_line
+        
+        self.edit_cell = None
+        
+        if not values:
+            self.values = None
+        else:
+            self.values = values
+
+    def set_grid_values_from_flat_list(self, new_values, max_cols=None, reset_cursor=True):
+        if not max_cols:
+            max_cols = self.columns
+        grid_values = [ [], ]
+        col_number        = 0
+        row_number        = 0
+        for f in new_values:
+            if col_number >= max_cols:
+                col_number = 0
+                grid_values.append([])
+                row_number += 1
+            grid_values[row_number].append(f)
+            col_number += 1
+        self.values = grid_values
+        if reset_cursor:
+            self.edit_cell = [0,0]
+        
+    def resize(self):
+        self.make_contained_widgets()
+
+    def make_contained_widgets(self):
+
+        if self.columns_widths:
+            self.columns = len(self.columns_widths)
+
+        elif self.column_width_requested:
+            # don't need a margin for the final column
+            self.columns = (self.width + self.col_margin) // (self.column_width_requested + self.col_margin)
+        elif self.columns_requested:
+            self.columns = self.columns_requested
+        else:
+            self.columns = self.default_column_number
+        self._my_widgets = []
+        column_width = (self.width + self.col_margin - self.additional_x_offset) // self.columns
+        column_width -= self.col_margin
+        self._column_width = column_width
+        if column_width < 1: raise Exception("Too many columns for space available")
+
+        for h in range( (self.height - self.additional_y_offset) // self.row_height ):
+            h_coord = h * self.row_height
+            row = []
+            x_offset = 0
+            for cell in range(self.columns):
+                # x_offset = cell * (self._column_width + self.col_margin)
+                column_width = int(self.width * self.columns_widths[cell])
+                row.append(self._contained_widgets(self.parent, rely=h_coord+self.rely + self.additional_y_offset, relx = self.relx + x_offset + self.additional_x_offset, width=column_width, height=self.row_height))
+                x_offset = x_offset + int(self.width * self.columns_widths[cell]) + self.col_margin
+
+            self._my_widgets.append(row)
+
+    def display_value(self, vl):
+        """Overload this function to change how values are displayed.  
+Should accept one argument (the object to be represented), and return a string."""
+        return str(vl)
+    
+        
+    def calculate_area_needed(self):
+        return 0,0
+
+    def update(self, clear=True):
+        if clear == True:
+            self.clear()
+        if self.begin_col_display_at < 0:
+            self.begin_col_display_at = 0
+        if self.begin_row_display_at < 0:
+            self.begin_row_display_at = 0
+        if (self.editing or self.always_show_cursor) and not self.edit_cell:
+            self.edit_cell = [0,0]
+        row_indexer = self.begin_row_display_at
+        for widget_row in self._my_widgets:
+            column_indexer = self.begin_col_display_at
+            for cell in widget_row:
+                cell.grid_current_value_index = (row_indexer, column_indexer)
+                self._print_cell(cell, )
+                column_indexer += 1
+            row_indexer += 1
+    
+    def _print_cell(self, cell,):
+        row_indexer, column_indexer = cell.grid_current_value_index
+        try:
+            cell_value = self.display_value(self.values[row_indexer][column_indexer])
+        except IndexError:
+            cell_value = self.on_empty_display
+            cell.grid_current_value_index = -1
+        except TypeError:
+            cell_value = self.on_empty_display
+            cell.grid_current_value_index = -1
+            
+        cell.grid_current_value_index
+        self._cell_widget_show_value(cell, cell_value)        
+        
+        if self.value:
+            if cell.grid_current_value_index in self.value or cell.grid_current_value_index == self.value:
+                self._cell_widget_show_value_selected(cell, True)
+            else:
+                self._cell_widget_show_value_selected(cell, False)
+        else:
+            self._cell_widget_show_value_selected(cell, False)
+        
+        if (self.editing or self.always_show_cursor) and cell.grid_current_value_index != -1:
+            if self.select_whole_line:
+                if (self.edit_cell[0] == cell.grid_current_value_index[0]):
+                    self._cell_show_cursor(cell, True)
+                    cell.highlight_whole_widget = True
+                else:
+                    self._cell_show_cursor(cell, False)
+            elif ((self.edit_cell[0] == cell.grid_current_value_index[0]) and (self.edit_cell[1] == cell.grid_current_value_index[1])):
+                self._cell_show_cursor(cell, True)
+            else:
+                self._cell_show_cursor(cell, False)
+        else:
+            self._cell_show_cursor(cell, False)
+            
+        self.custom_print_cell(cell, cell_value)
+        
+        cell.update() # <-------------------- WILL NEED TO OPTIMIZE THIS
+        
+
+    def custom_print_cell(self, actual_cell, cell_display_value):
+
+        if actual_cell.grid_current_value_index != -1:
+            row_indexer, column_indexer = actual_cell.grid_current_value_index
+            if column_indexer == 3:
+                if cell_display_value == "dead":
+                    actual_cell.color = 'DANGER'
+                else:   
+                    actual_cell.color = 'GOOD'
+
+        
+    def _cell_widget_show_value(self, cell, value):
+        cell.value = value
+    
+    def _cell_widget_show_value_selected(self, cell, yes_no):
+        cell.show_bold = yes_no
+    
+    def _cell_show_cursor(self, cell, yes_no):
+        cell.highlight = yes_no
+        
+    def handle_mouse_event(self, mouse_event):
+        # unfinished
+        for row in self._my_widgets:
+            for c in row:
+                if c.intersted_in_mouse_event(mouse_event):
+                    if c.grid_current_value_index != -1:
+                        self.edit_cell = list(c.grid_current_value_index)
+        self.display()
+
+        
+    def set_up_handlers(self):
+        super(ComplexColumnGrid, self).set_up_handlers()
+        self.handlers = {
+                    curses.KEY_UP:      self.h_move_line_up,
+                    curses.KEY_LEFT:    self.h_move_cell_left,
+                    curses.KEY_DOWN:    self.h_move_line_down,
+                    curses.KEY_RIGHT:   self.h_move_cell_right,
+                    "k":                self.h_move_line_up,
+                    "h":                self.h_move_cell_left,
+                    "j":                self.h_move_line_down,
+                    "l":                self.h_move_cell_right,
+                    curses.KEY_NPAGE:   self.h_move_page_down,
+                    curses.KEY_PPAGE:   self.h_move_page_up,
+                    curses.KEY_HOME:    self.h_show_beginning,
+                    curses.KEY_END:     self.h_show_end,
+                    ord('g'):           self.h_show_beginning,
+                    ord('G'):           self.h_show_end,
+                    curses.ascii.TAB:   self.h_exit,
+                    '^P':               self.h_exit_up,
+                    '^N':               self.h_exit_down,
+                    #curses.ascii.NL:    self.h_exit,
+                    #curses.ascii.SP:    self.h_exit,
+                    #ord('x'):       self.h_exit,
+                    ord('q'):       self.h_exit,
+                    curses.ascii.ESC:   self.h_exit,
+                    curses.KEY_MOUSE:    self.h_exit_mouse,
+                    "c":                self.h_copy_value,
+                    # "x":                self.h_append_alias,
+                }
+
+        self.complex_handlers = [
+                    ]
+    
+    def getValuesFlatList(self):
+        output_list = []
+        for row in self.values:
+            for col in row:
+                output_list.append(col)
+        return output_list
+    
+    
+    def ensure_cursor_on_display_down_right(self, inpt=None):
+        while self.begin_row_display_at  + len(self._my_widgets) - 1 < self.edit_cell[0]:
+            self.h_scroll_display_down(inpt)
+        while self.edit_cell[1] > self.begin_col_display_at + self.columns - 1:
+            self.h_scroll_right(inpt)
+    
+    def ensure_cursor_on_display_up(self, inpt=None):
+        while self.begin_row_display_at  >  self.edit_cell[0]:
+            self.h_scroll_display_up(inpt)
+        
+    def h_show_beginning(self, inpt):
+        self.begin_col_display_at = 0
+        self.begin_row_display_at = 0
+        self.edit_cell = [0, 0]
+    
+    def h_show_end(self, inpt):
+        self.edit_cell = [len(self.values) - 1 , len(self.values[-1]) - 1]
+        self.ensure_cursor_on_display_down_right()
+        
+    def h_move_cell_left(self, inpt):
+        if self.edit_cell[1] > 0:
+            self.edit_cell[1] -= 1
+        
+        if self.edit_cell[1] < self.begin_col_display_at:
+            self.h_scroll_left(inpt)
+    
+    def h_move_cell_right(self, inpt):
+        if self.edit_cell[1] <= len(self.values[self.edit_cell[0]]) -2:   # Only allow move to end of current line
+            self.edit_cell[1] += 1
+        
+        if self.edit_cell[1] > self.begin_col_display_at + self.columns - 1:
+            self.h_scroll_right(inpt)
+    
+    def h_move_line_down(self, inpt):
+        if self.edit_cell[0] <= (len(self.values) -2) \
+        and (len(self.values[self.edit_cell[0]+1]) > self.edit_cell[1]):
+            self.edit_cell[0] += 1
+        if self.begin_row_display_at  + len(self._my_widgets) - 1 < self.edit_cell[0]:
+            self.h_scroll_display_down(inpt)
+    
+    def h_move_line_up(self, inpt):
+        if self.edit_cell[0] > 0:
+            self.edit_cell[0] -= 1
+            
+        if self.edit_cell[0] < self.begin_row_display_at:
+            self.h_scroll_display_up(inpt)
+    
+    def h_scroll_right(self, inpt):
+        if self.begin_col_display_at + self.columns < len(self.values[self.edit_cell[0]]):
+            self.begin_col_display_at += self.columns
+        
+    def h_scroll_left(self, inpt):
+        if self.begin_col_display_at > 0:
+            self.begin_col_display_at -= self.columns
+        
+        if self.begin_col_display_at < 0:
+            self.begin_col_display_at = 0
+
+    def h_scroll_display_down(self, inpt):
+        if self.begin_row_display_at + len(self._my_widgets) < len(self.values):
+            self.begin_row_display_at += len(self._my_widgets)
+        
+    def h_scroll_display_up(self, inpt):
+        if self.begin_row_display_at > 0:
+            self.begin_row_display_at -= len(self._my_widgets)
+        if self.begin_row_display_at < 0:
+            self.begin_row_display_at = 0
+    
+    def h_move_page_up(self, inpt):
+        self.edit_cell[0] -= len(self._my_widgets)
+        if self.edit_cell[0] < 0:
+             self.edit_cell[0] = 0
+        self.ensure_cursor_on_display_up()
+             
+    def h_move_page_down(self, inpt):
+        self.edit_cell[0] += len(self._my_widgets)
+        if self.edit_cell[0] > len(self.values) - 1:
+             self.edit_cell[0] = len(self.values) -1
+        
+        self.ensure_cursor_on_display_down_right()
+        
+    def h_exit(self, ch):
+        self.editing = False
+        self.how_exited = True
+
+    def h_copy_value(self, inpt):
+        pyperclip.copy(self.values[self.edit_cell[0]][self.edit_cell[1]])
+
+    def h_append_alias(self, inpt):
+
+        vvvv = self.values[self.edit_cell[0]][1]
+        # pyperclip.copy()
+        # self.parent.parentApp.setNextForm('POPP')
+        # print(vvvv)
+    
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+
+class MainForm(npyscreen.FormBaseNew):
+    def create(self):
+        self.grid = self.add(ComplexColumnGrid, columns_widths=[ 0.1, 0.5, 0.2, 0.1 ])
+        self.grid.values = [ ]
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+
+class Scanner(npyscreen.NPSAppManaged):
+
+
+    def check_alive(self):
+        tick = 0
+        while self.alive:
+            if tick >= 8:
+                self.mutex.acquire()
+                self.while_waiting()
+                self.mutex.release()
+                self.main_form.grid.display()
+                tick = 0
+            tick += 1
+            time.sleep(0.25)
+
+    ###########################################################################
+    ###########################################################################
+
+    def onStart(self):
+
+        self.t0 = time.time()
+        
+        self.main_form = MainForm(name='Panduza Scanner')
+        self.registerForm("MAIN", self.main_form)
+
+        for client in self.clients:
+            client["client"].loop_start()
+
+        self.alive = True
+        self.mutex = threading.Lock()
+        self.x = threading.Thread(target=self.check_alive)
+        self.x.start()
+
+    ###########################################################################
+    ###########################################################################
+
+    def stop(self):
+        self.alive = False
+        self.x.join()
+
+    ###########################################################################
+    ###########################################################################
+
+    def while_waiting(self):
+
+        now = time.time()
+        now_relative = int(now - self.t0)
+
+        for i in range(len(self.main_form.grid.values)):
+            time_val = self.main_form.grid.values[i][3]
+            if time_val != "dead":
+                res = abs(now_relative - int(time_val))
+                if res > 5:
+                    self.main_form.grid.values[i][3] = "dead"
+
+
+    ###########################################################################
+    ###########################################################################
+
+    def _on_message(self, client, userdata, msg):
+        """
+        """
+        self.mutex.acquire()
+        now = time.time()
+
+        info = json.loads( msg.payload.decode("utf-8") )
+        if isinstance(info, str):
+            info = json.loads(info)
+
+        base_topic = msg.topic[:-5]
+
+        type = "??"
+        if "type" in info:
+            type = info["type"]
+        version = "??"
+        if "version" in info:
+            version = info["version"]
+        type_version = type + ":" + version
+
+        broker_name = "??"
+        for cccc in self.clients:
+            if cccc["client"] == client:
+                broker_name = cccc["broker"]
+
+        idx = self.interface_grid_index(base_topic)
+        if idx == -1:
+            self.main_form.grid.values.append([ broker_name, base_topic, type_version, int(now - self.t0) ])
+        else:
+            self.main_form.grid.values[idx][3] = str( int(now - self.t0) )
+        self.mutex.release()
+
+        self.main_form.grid.display()
+
+    ###########################################################################
+    ###########################################################################
+
+    def interface_grid_index(self, base_topic):
+        """
+        """
+        for i in range(len(self.main_form.grid.values)):
+            if self.main_form.grid.values[i][1] == base_topic:
+                return i
+        return -1
+
+    ###########################################################################
+    ###########################################################################
+
+    def load_broker(self, broker_name, broker_url):
+
+        broker_info = broker_url.split(":")
+        url = broker_info[0]
+        port = int(broker_info[1])
+
+        # print("scan ", url, ">", port)
+
+        client = mqtt.Client()
+        client.on_message = self._on_message
+        client.connect(url, port, 60)
+        client.subscribe("pza/+/+/+/info")
+
+        if not hasattr(self, "clients"):
+            self.clients = []
+
+        self.clients.append({
+            "broker": broker_name,
+            "client": client
+        })
+
+
