@@ -6,7 +6,7 @@ import base64
 
 
 
-class SpiMaster:
+class SpiSlave:
 
     ###########################################################################
     ###########################################################################
@@ -26,20 +26,4 @@ class SpiMaster:
 
         # self.client.on_message = _on_message
 
-
-    ###########################################################################
-    ###########################################################################
-    
-    def transfer(self, out_buffer, in_request):
-        """
-        """
-        payload = json.dumps({
-            "in_request": in_request,
-            "out_buffer": base64.b64encode(out_buffer).decode('ascii')
-        })
-        self.client.publish(self.baseTopic + "/cmds/data/transfer", payload, qos=0, retain=False)
-
-
-    ###########################################################################
-    ###########################################################################
 
