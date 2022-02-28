@@ -3,10 +3,10 @@ from .core import Core
 import json
 import logging
 import base64
+from .interface import PzaInterface
 
 
-
-class SpiSlave:
+class SpiSlave(PzaInterface):
     """
     """
 
@@ -27,6 +27,9 @@ class SpiSlave:
     def _on_mqtt_message(self, client, userdata, msg):
         """
         """
+        #
         super()._on_mqtt_message(client, userdata, msg)
 
         print("sub class _on_mqtt_message  slave !!")
+
+

@@ -19,6 +19,8 @@ class PzaInterface:
     ###########################################################################
 
     def enableWatchdog(self):
+        """
+        """
         self.client.subscribe(self.baseTopic + "/info")
         self.watchdog = { "alive": False, "enabled": True, "heartbeat": time.time() }
 
@@ -48,7 +50,7 @@ class PzaInterface:
     ###########################################################################
 
     def _on_mqtt_message(self, client, userdata, msg):
-        # print("!!!", msg.topic)
+        print("!!!", msg.topic)
 
         if self.watchdog["enabled"] and msg.topic.endswith('/info'):
             # print("info !!!  ", time.time(), "\n")

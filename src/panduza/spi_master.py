@@ -24,8 +24,8 @@ class SpiMaster(PzaInterface):
         """
         """
         payload = json.dumps({
-            "in_request": in_request,
-            "out_buffer": base64.b64encode(out_buffer).decode('ascii')
+            "size_to_receive": in_request,
+            "data_to_send": base64.b64encode(out_buffer).decode('ascii')
         })
         self.client.publish(self.baseTopic + "/cmds/data/transfer", payload, qos=0, retain=False)
 
