@@ -6,34 +6,61 @@ class Core:
     """ Core class
     """
 
-    Connections = {}
+    # Store mqtt clients
+    Clients = {}
 
+    # Store aliases
     Aliases = {}
 
+    # Store connections data
+    Connections = {}
+
     ###########################################################################
     ###########################################################################
 
-    def LoadAliases(connections):
-        """ Load connections
-            @param connections
-            {
-                "connection_1": {
-                    "url": "localhost",
-                    "port": 1883,
-                    "interfaces": {
-                        "foo1": "/topic/to/foo1",
-                        "foo2": "/topic/to/foo2",
-                    }
-                },
-                "connection_2": {
-                    "url": "broker.online",
-                    "port": 1883,
-                    "interfaces": {
-                        "foo3": "/topic/to/foo3",
-                        "foo4": "/topic/to/foo4",
+    def LoadAliases(connections=None, filepath=None):
+        """ Load aliases from connections or json file with connections
+
+        Args:
+            connections (dict, optional): Connections as declared as dict
+                {
+                    "connection_1": {
+                        "url": "localhost",
+                        "port": 1883,
+                        "interfaces": {
+                            "foo1": "/topic/to/foo1",
+                            "foo2": "/topic/to/foo2",
+                        }
+                    },
+                    "connection_2": {
+                        "url": "broker.online",
+                        "port": 1883,
+                        "interfaces": {
+                            "foo3": "/topic/to/foo3",
+                            "foo4": "/topic/to/foo4",
+                        }
                     }
                 }
-            }
+                Defaults to Null.
+            
+            filepath (string, optional): File containing json connections declaration. Defaults to Null.
+        """
+        # Load connections
+        if connections:
+            Core.__LoadAliasesFromDict(connections)
+        elif filepath:
+            with open(filepath) as f:
+                data = json.load(f)
+                Core.__LoadAliasesFromDict(data)
+
+        # # Reset clients
+        # Core.__ResetClients()
+
+    ###########################################################################
+    ###########################################################################
+
+    def __LoadAliasesFromDict(connections):
+        """ Load aliases from a connections dict
         """
         for co in connections:
             # Load connection
@@ -49,9 +76,34 @@ class Core:
                     "base_topic": connections[co]["interfaces"][it]
                 }
 
-        # print(Core.Connections)
-        # print(Core.Aliases)
+    # ###########################################################################
+    # ###########################################################################
 
+    # def __ResetClients():
+    #     """ Create mqtt clients from connections data
+    #     """
+    #     for co in Core.Connections:
+    #         # Create the client
+    #         client = mqtt.Client(userdata=co)
+    #         client.on_message = Core.__on_message
+    #         client.connect(Core.Connections[co]["url"], Core.Connections[co]["port"])
+    #         client.loop_start()
+
+    #         # Store the client
+    #         Core.Clients[co] = {}
+    #         Core.Clients[co]["obj"] = client
+    #         Core.Clients[co]["interfaces"] = {}
+
+    # ###########################################################################
+    # ###########################################################################
+
+    # def __on_message(client, userdata, msg):
+    #     print("Connected with result code {msg.payload}", "\n")
+
+    #     co = userdata
+    #     print(userdata, "\n")
+    #     for it in Core.Clients[co]["interfaces"]:
+    #         it.on_mqtt_message(msg)
 
     ###########################################################################
     ###########################################################################
@@ -68,9 +120,11 @@ class Core:
         if co not in Core.Connections.keys():
             raise Exception("Connection [" + co + "] not defined")
 
-        # Generate the new client
-        client = mqtt.Client()
+        # Create the client
+        client = mqtt.Client(userdata=co)
         client.connect(Core.Connections[co]["url"], Core.Connections[co]["port"])
+
+        # Get the client
         return client
 
     ###########################################################################
@@ -93,49 +147,5 @@ class Core:
         """
         return (Core.GetClient(alias), Core.GetBaseTopic(alias))
 
-    # ###########################################################################
-    # ###########################################################################
 
-    # def ScanInterfaces(co="*", timeout=2, filters=None):
-    #     """
-    #     """
-    #     # Initialize scan infos
-    #     scan_infos = []
-
-    #     # Get the connections that must be scanned
-    #     conns={}
-    #     if "*" == co:
-    #         conns = Core.Connections
-    #     else:
-    #         conns = {}
-    #         conns[co] = Core.Connections[co]
-
-    #     # For each connections scan and store panduza interfaces        
-    #     for co in conns:
-            
-    #         def _on_message(client, userdata, msg):
-    #             info = json.loads(msg.payload)
-
-    #             append_flag = True
-    #             if filters:
-    #                 if info['type'] not in filters:
-    #                     append_flag = False
-
-    #             if append_flag:
-    #                 scan_infos.append({
-    #                     'topic': msg.topic[:-5], 'info': info
-    #                 })
-
-    #         client = mqtt.Client()
-    #         client.on_message = _on_message
-    #         client.connect(conns[co]['url'], conns[co]['port'], 60)
-    #         client.subscribe("pza/+/+/+/info")
-
-    #         t_end = time.time() + timeout
-    #         while time.time() < t_end:
-    #             client.loop()
-
-
-    #     return scan_infos
-        
 

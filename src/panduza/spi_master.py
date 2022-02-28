@@ -1,31 +1,21 @@
 import json
-from .core import Core
-import json
-import logging
 import base64
+import logging
+from .core import Core
+from .interface import PzaInterface
 
 
-
-class SpiMaster:
+class SpiMaster(PzaInterface):
+    """
+    """
 
     ###########################################################################
     ###########################################################################
     
-    def __init__(self, alias=None) -> None:
-        """Constructor
+    def __init__(self, alias=None):
+        """ Constructor
         """
-        self.client, self.baseTopic = Core.GetClientAndBaseTopic(alias)
-
-        
-        # self.client.subscribe(self.baseTopic + "/atts/value")
-
-        # def _on_message(client, userdata, msg):
-        #     # print(f"Connected with result code {msg.payload}")
-        #     global CONTEXT
-        #     CONTEXT = { "alive":False, "payload": msg.payload }
-
-        # self.client.on_message = _on_message
-
+        super().__init__(alias)
 
     ###########################################################################
     ###########################################################################
@@ -38,7 +28,6 @@ class SpiMaster:
             "out_buffer": base64.b64encode(out_buffer).decode('ascii')
         })
         self.client.publish(self.baseTopic + "/cmds/data/transfer", payload, qos=0, retain=False)
-
 
     ###########################################################################
     ###########################################################################

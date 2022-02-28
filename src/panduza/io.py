@@ -13,7 +13,7 @@ class Io:
     ###########################################################################
     ###########################################################################
     
-    def __init__(self, alias=None) -> None:
+    def __init__(self, alias=None):
         """
         """
         self.client, self.baseTopic = Core.GetClientAndBaseTopic(alias)
