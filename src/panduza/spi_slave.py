@@ -61,12 +61,8 @@ class SpiSlave(PzaInterface):
         #
         super()._on_mqtt_message(client, userdata, msg)
 
-        print("sub class _on_mqtt_message  slave !!", "\n")
-        
         # 
         if msg.topic.endswith('/atts/data'):
-            print(f"pok {msg.payload} \n")
-        
             request = self.payload_to_dict(msg.payload)
             data = base64.b64decode(request["data"])
             
