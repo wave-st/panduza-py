@@ -23,6 +23,8 @@ class SpiMaster(PzaInterface):
     def transfer(self, out_buffer, in_request):
         """
         """
+
+
         payload = json.dumps({
             "size_to_receive": in_request,
             "data_to_send": base64.b64encode(out_buffer).decode('ascii')

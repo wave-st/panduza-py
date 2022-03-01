@@ -1,4 +1,5 @@
 import time
+import json
 from .core import Core
 
 class PzaInterface:
@@ -14,6 +15,30 @@ class PzaInterface:
 
         self.client.on_message = self._on_mqtt_message
         self.client.loop_start()
+
+    ###########################################################################
+    ###########################################################################
+
+    def payload_to_dict(self, payload):
+        """ To parse json payload
+        """
+        return json.loads(payload.decode("utf-8"))
+
+    ###########################################################################
+    ###########################################################################
+
+    def payload_to_int(self, payload):
+        """
+        """
+        return int(payload.decode("utf-8"))
+
+    ###########################################################################
+    ###########################################################################
+
+    def payload_to_str(self, payload):
+        """
+        """
+        return payload.decode("utf-8")
 
     ###########################################################################
     ###########################################################################
@@ -50,7 +75,7 @@ class PzaInterface:
     ###########################################################################
 
     def _on_mqtt_message(self, client, userdata, msg):
-        print("!!!", msg.topic)
+        # print("!!!", msg.topic)
 
         if self.watchdog["enabled"] and msg.topic.endswith('/info'):
             # print("info !!!  ", time.time(), "\n")
