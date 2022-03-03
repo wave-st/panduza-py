@@ -17,37 +17,46 @@ class TwiMaster(PzaInterface):
         """
         super().__init__(alias)
 
-        # self.pending_data = []
+        self.pending_data = []
 
-        # self.client.subscribe(self.baseTopic + "/atts/data")
+        self.client.subscribe(self.baseTopic + "/atts/data")
 
-    # ###########################################################################
-    # ###########################################################################
+    ###########################################################################
+    ###########################################################################
 
-    # def has_pending_data(self):
-    #     """ Return the number of pending data
-    #     """
-    #     return len(self.pending_data)
+    def has_pending_data(self):
+        """ Return the number of pending data
+        """
+        return len(self.pending_data)
 
-    # ###########################################################################
-    # ###########################################################################
+    ###########################################################################
+    ###########################################################################
 
-    # def pop_data(self):
-    #     """
-    #     """
-    #     if len(self.pending_data) <= 0:
-    #         return None
-    #     return self.pending_data.pop(0)
+    def pop_data(self):
+        """
+        """
+        if len(self.pending_data) <= 0:
+            return None
+        return self.pending_data.pop(0)
 
     ###########################################################################
     ###########################################################################
     
-    def write(self, data):
+    def write(self, data, addr, addr_10b=False, no_stop=False):
         """
         """
-        payload = json.dumps({
-            "data": base64.b64encode(data).decode('ascii')
-        })
+        # Prepare the payload
+        payload_dict = {
+            "data": base64.b64encode(data).decode('ascii'),
+            "addr": addr
+        }
+        if addr_10b:
+            payload_dict["addr_10b"] = addr_10b
+        if no_stop:
+            payload_dict["no_stop"] = no_stop
+
+        payload = json.dumps(payload_dict)
+            
         self.client.publish(self.baseTopic + "/cmds/data/write", payload, qos=0, retain=False)
 
     ###########################################################################
@@ -72,23 +81,20 @@ class TwiMaster(PzaInterface):
         })
         self.client.publish(self.baseTopic + "/cmds/data/writeRead", payload, qos=0, retain=False)
 
-    # ###########################################################################
-    # ###########################################################################
+    ###########################################################################
+    ###########################################################################
 
-    # def _on_mqtt_message(self, client, userdata, msg):
-    #     """
-    #     """
-    #     #
-    #     super()._on_mqtt_message(client, userdata, msg)
-        
-        
-    #     # 
-    #     if msg.topic.endswith('/atts/data'):
-    #         request = self.payload_to_dict(msg.payload)
-    #         data = base64.b64decode(request["data"])
+    def _on_mqtt_message(self, client, userdata, msg):
+        """
+        """
+        #
+        super()._on_mqtt_message(client, userdata, msg)
+                
+        # 
+        if msg.topic.endswith('/atts/data'):
+            request = self.payload_to_dict(msg.payload)
+            data = base64.b64decode(request["data"])
             
-    #         self.pending_data.append(data)
+            self.pending_data.append(data)
 
-    # ###########################################################################
-    # ###########################################################################
 
