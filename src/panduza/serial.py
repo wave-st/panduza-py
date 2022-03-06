@@ -14,7 +14,7 @@ class Serial:
     def __init__(self, alias=None) -> None:
         """
         """
-        self.client, self.baseTopic = Core.GetClientAndBaseTopic(alias)
+        self.client, self.base_topic = Core.GetClientAndBaseTopic(alias)
 
     ###########################################################################
     ###########################################################################
@@ -22,8 +22,8 @@ class Serial:
     def write(self, data):
         """
         """
-        mog.debug("Serial write > %s (%s)", self.baseTopic + "/cmds/data/send", data)
-        self.client.publish(self.baseTopic + "/cmds/data/send", data, qos=0, retain=False)
+        mog.debug("Serial write > %s (%s)", self.base_topic + "/cmds/data/send", data)
+        self.client.publish(self.base_topic + "/cmds/data/send", data, qos=0, retain=False)
 
     ###########################################################################
     ###########################################################################
@@ -43,7 +43,7 @@ class Serial:
             on_data(msg.payload)
 
         self.client.on_message = _on_message
-        self.client.subscribe(self.baseTopic + "/atts/data")
+        self.client.subscribe(self.base_topic + "/atts/data")
         self.client.loop_start()
 
     ###########################################################################

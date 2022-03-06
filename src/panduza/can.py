@@ -14,7 +14,7 @@ class Can:
     def __init__(self, alias=None):
         """
         """
-        self.client, self.baseTopic = Core.GetClientAndBaseTopic(alias)
+        self.client, self.base_topic = Core.GetClientAndBaseTopic(alias)
 
     ###########################################################################
     ###########################################################################
@@ -30,8 +30,8 @@ class Can:
         for element in payload:
             jsonFrame['payload'].append(element)
         
-        mog.debug("Can write > %s (%s)", self.baseTopic + "/cmds/msg", json.dumps(jsonFrame))
-        self.client.publish(self.baseTopic + "/cmds/msg", json.dumps(jsonFrame), qos=0, retain=False)
+        mog.debug("Can write > %s (%s)", self.base_topic + "/cmds/msg", json.dumps(jsonFrame))
+        self.client.publish(self.base_topic + "/cmds/msg", json.dumps(jsonFrame), qos=0, retain=False)
 
     ###########################################################################
     ###########################################################################
@@ -51,7 +51,7 @@ class Can:
             on_data(msg.payload)
 
         self.client.on_message = _on_message
-        self.client.subscribe(self.baseTopic + "/atts/msg")
+        self.client.subscribe(self.base_topic + "/atts/msg")
         self.client.loop_start()
 
     ###########################################################################

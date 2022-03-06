@@ -19,7 +19,7 @@ class SpiMaster(PzaInterface):
 
         self.pending_data = []
 
-        self.client.subscribe(self.baseTopic + "/atts/data")
+        self.client.subscribe(self.base_topic + "/atts/data")
 
     ###########################################################################
     ###########################################################################
@@ -49,7 +49,7 @@ class SpiMaster(PzaInterface):
             "data": base64.b64encode(data).decode('ascii'),
             "write_only": write_only
         })
-        self.client.publish(self.baseTopic + "/cmds/data/transfer", payload, qos=0, retain=False)
+        self.client.publish(self.base_topic + "/cmds/data/transfer", payload, qos=0, retain=False)
 
     ###########################################################################
     ###########################################################################

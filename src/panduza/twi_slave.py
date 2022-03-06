@@ -19,7 +19,7 @@ class TwiSlave(PzaInterface):
 
         self.pending_data = []
 
-        self.client.subscribe(self.baseTopic + "/atts/data")
+        self.client.subscribe(self.base_topic + "/atts/data")
 
     ###########################################################################
     ###########################################################################
@@ -48,7 +48,7 @@ class TwiSlave(PzaInterface):
     #     payload = json.dumps({
     #         "data": base64.b64encode(data).decode('ascii')
     #     })
-    #     self.client.publish(self.baseTopic + "/cmds/responses/push", payload, qos=0, retain=False)
+    #     self.client.publish(self.base_topic + "/cmds/responses/push", payload, qos=0, retain=False)
 
 
     ###########################################################################

@@ -16,7 +16,7 @@ class Io:
     def __init__(self, alias=None):
         """
         """
-        self.client, self.baseTopic = Core.GetClientAndBaseTopic(alias)
+        self.client, self.base_topic = Core.GetClientAndBaseTopic(alias)
         
     ###########################################################################
     ###########################################################################
@@ -38,7 +38,7 @@ class Io:
 
 
         payload = json.dumps({ "direction": direction })
-        self.client.publish(self.baseTopic + "/cmds/direction/set", payload, qos=0, retain=False)
+        self.client.publish(self.base_topic + "/cmds/direction/set", payload, qos=0, retain=False)
 
 
         # client.publish('pza/all/cmd/scan', "do", qos=0, retain=False)
@@ -91,7 +91,7 @@ class Io:
         """
         
         payload = json.dumps({ "value": value })
-        self.client.publish(self.baseTopic + "/cmds/value/set", payload, qos=0, retain=False)
+        self.client.publish(self.base_topic + "/cmds/value/set", payload, qos=0, retain=False)
 
     ###########################################################################
     ###########################################################################
@@ -99,7 +99,7 @@ class Io:
     def readValue(self):
         """
         """        
-        self.client.subscribe(self.baseTopic + "/atts/value")
+        self.client.subscribe(self.base_topic + "/atts/value")
 
         def _on_message(client, userdata, msg):
             # print(f"Connected with result code {msg.payload}")
@@ -113,7 +113,7 @@ class Io:
         while CONTEXT["alive"]:
             self.client.loop()
 
-        self.client.unsubscribe(self.baseTopic + "/atts/value")
+        self.client.unsubscribe(self.base_topic + "/atts/value")
 
         obj = json.loads( CONTEXT["payload"] )
         # print()

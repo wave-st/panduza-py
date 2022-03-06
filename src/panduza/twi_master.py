@@ -12,14 +12,14 @@ class TwiMaster(PzaInterface):
     ###########################################################################
     ###########################################################################
     
-    def __init__(self, alias=None):
+    def __init__(self, alias=None, b_addr=None, b_port=None, b_topic=None):
         """ Constructor
         """
-        super().__init__(alias)
+        super().__init__(alias, b_addr, b_port, b_topic)
 
         self.pending_data = []
 
-        self.client.subscribe(self.baseTopic + "/atts/data")
+        self.client.subscribe(self.base_topic + "/atts/data")
 
     ###########################################################################
     ###########################################################################
@@ -57,7 +57,7 @@ class TwiMaster(PzaInterface):
 
         payload = json.dumps(payload_dict)
             
-        self.client.publish(self.baseTopic + "/cmds/data/write", payload, qos=0, retain=False)
+        self.client.publish(self.base_topic + "/cmds/data/write", payload, qos=0, retain=False)
 
     ###########################################################################
     ###########################################################################
@@ -68,7 +68,7 @@ class TwiMaster(PzaInterface):
         payload = json.dumps({
             "size": size
         })
-        self.client.publish(self.baseTopic + "/cmds/data/read", payload, qos=0, retain=False)
+        self.client.publish(self.base_topic + "/cmds/data/read", payload, qos=0, retain=False)
 
     ###########################################################################
     ###########################################################################
@@ -79,7 +79,7 @@ class TwiMaster(PzaInterface):
         payload = json.dumps({
             "data": base64.b64encode(data).decode('ascii')
         })
-        self.client.publish(self.baseTopic + "/cmds/data/writeRead", payload, qos=0, retain=False)
+        self.client.publish(self.base_topic + "/cmds/data/writeRead", payload, qos=0, retain=False)
 
     ###########################################################################
     ###########################################################################
