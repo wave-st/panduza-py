@@ -73,11 +73,18 @@ class TwiMaster(PzaInterface):
     ###########################################################################
     ###########################################################################
     
-    def writeRead(self, data):
-        """
+    def writeRead(self, addr, w_data, r_size, addr_10b=False, no_stop=False):
+        """Send a twi WriteRead request
+
+        Args:
+            addr (int): twi address of the device
+            w_data (bytes): data that must be written first
+            r_size (int): number of byte that must be read after the write operation
         """
         payload = json.dumps({
-            "data": base64.b64encode(data).decode('ascii')
+            "addr": addr,
+            "size": r_size,
+            "data": base64.b64encode(w_data).decode('ascii')
         })
         self.client.publish(self.base_topic + "/cmds/data/writeRead", payload, qos=0, retain=False)
 
@@ -85,7 +92,12 @@ class TwiMaster(PzaInterface):
     ###########################################################################
 
     def _on_mqtt_message(self, client, userdata, msg):
-        """
+        """_summary_
+
+        Args:
+            client (_type_): _description_
+            userdata (_type_): _description_
+            msg (_type_): _description_
         """
         #
         super()._on_mqtt_message(client, userdata, msg)
