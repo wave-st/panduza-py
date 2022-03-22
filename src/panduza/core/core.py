@@ -1,5 +1,4 @@
 import json
-import paho.mqtt.client as mqtt
 
 class Core:
     """Core object to share configuration data
@@ -72,7 +71,29 @@ class Core:
     ###########################################################################
     ###########################################################################
 
-    def BrokerInfoFromAlias(alias):
+    def BrokerInfoFromBrokerAlias(alias):
+        """Return the broker data from alias
+
+        Args:
+            alias (str): Broker alias
+
+        Raises:
+            Exception: raise if connection alias not loaded
+
+        Returns:
+            str, int: url, port
+        """
+        # Get data from the connection
+        if alias not in Core.Connections.keys():
+            raise Exception("Connection [" + alias + "] not defined")
+
+        # Get the client
+        return Core.Connections[alias]["url"], Core.Connections[alias]["port"]
+
+    ###########################################################################
+    ###########################################################################
+
+    def BrokerInfoFromInterfaceAlias(alias):
         """
         """
         # Get alias
@@ -83,10 +104,6 @@ class Core:
         # Get data from the connection
         if co not in Core.Connections.keys():
             raise Exception("Connection [" + co + "] not defined")
-
-        # # Create the client
-        # client = mqtt.Client(userdata=co)
-        # client.connect(Core.Connections[co]["url"], Core.Connections[co]["port"])
 
         # Get the client
         return Core.Connections[co]["url"], Core.Connections[co]["port"]
@@ -103,13 +120,7 @@ class Core:
 
         return Core.Aliases[alias]["base_topic"]
 
-    # ###########################################################################
-    # ###########################################################################
-
-    # def GetClientAndBaseTopic(alias):
-    #     """
-    #     """
-    #     return (Core.GetClient(alias), Core.GetBaseTopic(alias))
-
+    ###########################################################################
+    ###########################################################################
 
 

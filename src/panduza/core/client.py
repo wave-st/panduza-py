@@ -7,18 +7,18 @@
  February 2022
 """
 
-from abc import ABC, abstractmethod
+# from abc import ABC, abstractmethod
 
 import logging
-import queue
+# import queue
 import threading
 import traceback
 
 import json
 import paho.mqtt.client as mqtt
 
-from typing      import Optional, Callable, Set
-from dataclasses import dataclass, field
+# from typing import Optional, Callable, Set
+# from dataclasses import dataclass, field
 
 from .core import Core
 
@@ -26,60 +26,52 @@ from .core import Core
 # │ Utilities                              │
 # └────────────────────────────────────────┘
 
-def _pza_path_join(*args):
-    return "/".join(args)
+# def _pza_path_join(*args):
+#     return "/".join(args)
 
 # ┌────────────────────────────────────────┐
-# │ Panduza connection                     │
+# │ Panduza client                         │
 # └────────────────────────────────────────┘
 
 class Client:
-    
 
     def __init__(self, alias=None, url=None, port=None):
+        """Client Constructor
 
+        The client can be build from
+
+        - Alias
+        OR
+        - Url + Port
+
+        Args:
+            alias (str, optional): connection alias. Defaults to None.
+            url (str, optional): broker url. Defaults to None.
+            port (str, optional): port url. Defaults to None.
+        """
+        # Manage double way of loading client information
         if alias:
-            # load from alias
-            pass
-        
+            self.url, self.port = Core.BrokerInfoFromBrokerAlias(alias)
         else:
-            # create client
-            pass
+            self.url = url
+            self.port = port
+        
+        # Set flags
+        self.is_connected = False
 
-
+        # Logs
         self.log = logging.getLogger(f"Panduza {url}:{port}")
         self.log.info("Init panduza connection")
 
-        self.url                           = url
-        self.port                          = port
-        self.is_connected                  = False
-
         # Init MQTT client instance
-        self.client                        = mqtt.Client()
-        self.client.on_message             = self.__on_message
-        self.client.on_connect             = self.__on_connect
-        self.client.on_disconnect          = self.__on_disconnect
+        self.client = mqtt.Client()
+        self.client.on_message = self.__on_message
+        self.client.on_connect = self.__on_connect
+        self.client.on_disconnect = self.__on_disconnect
 
         # Listeners
-        self._listeners                    = dict()
-        self._listeners_lock               = threading.RLock()
-
-
-
-
-    # ┌────────────────────────────────────────┐
-    # │ Message callback                       │
-    # └────────────────────────────────────────┘
-
-    def __on_message(self, client, userdata, message):
-        self.log.debug(f"Received MQTT message on topic '{message.topic}' with QOS {message.qos}")
-
-        with self._listeners_lock:
-            if message.topic in self._listeners:
-                # Call all listener's callbacks
-                for callback in self._listeners[message.topic]:
-                    callback(message.payload)
-
+        self._listeners = dict()
+        self._listeners_lock = threading.RLock()
 
     # ┌────────────────────────────────────────┐
     # │ Connect / Disconnect                   │
@@ -90,7 +82,6 @@ class Client:
 
         self.client.connect(self.url, self.port)
         self.client.loop_start()
-
 
     def disconnect(self):
         self.log.debug("Disconnect from broker")
@@ -104,6 +95,21 @@ class Client:
         self.is_connected = False
 
     # ┌────────────────────────────────────────┐
+    # │ Message callback                       │
+    # └────────────────────────────────────────┘
+
+    def __on_message(self, client, userdata, message):
+        self.log.debug(
+            f"Received MQTT message on topic '{message.topic}' with QOS {message.qos}")
+
+        with self._listeners_lock:
+            if message.topic in self._listeners:
+                # Call all listener's callbacks
+                for callback in self._listeners[message.topic]:
+                    callback(message.payload)
+
+
+    # ┌────────────────────────────────────────┐
     # │ Publish wrapper                        │
     # └────────────────────────────────────────┘
 
@@ -111,22 +117,19 @@ class Client:
         self.log.debug(f"Publish to topic {topic} with QOS={qos}: {payload}")
         self.client.publish(topic, payload, qos=qos, retain=False)
 
-
     def publish_json(self, topic, req: dict, qos=0):
         self.publish(
-            topic    = topic,
-            payload  = json.dumps(req).encode("utf-8"),
-            qos      = qos
+            topic=topic,
+            payload=json.dumps(req).encode("utf-8"),
+            qos=qos
         )
-
 
     # ┌────────────────────────────────────────┐
     # │ Register/Unregister listener           │
     # └────────────────────────────────────────┘
-    
+
     def subscribe(self, topic: str, callback):
-        """
-        Registers the listener, returns the queue instance
+        """Registers the listener, returns the queue instance
         """
 
         self.log.debug(f"Register listener for topic '{topic}'")
@@ -138,15 +141,14 @@ class Client:
 
             # Check that callback is not already registered, and register
             if callback in self._listeners[topic]:
-                raise ValueError(f"callback {callback} already registered for topic {topic}")
+                raise ValueError(
+                    f"callback {callback} already registered for topic {topic}")
 
             else:
                 self._listeners[topic].add(callback)
 
-
-    def unsubscribe(self, topic: str, callback = None):
-        """
-        Unsuscribe listener from topic. if callback is None, unregister all listeners
+    def unsubscribe(self, topic: str, callback=None):
+        """Unsuscribe listener from topic. if callback is None, unregister all listeners
         """
 
         self.log.debug(f"Unregister listener for topic '{topic}'")
@@ -167,7 +169,8 @@ class Client:
 
                 else:
                     if not (callback in self._listeners[topic]):
-                        raise ValueError(f"callback {callback} not registered for topic {topic}")
+                        raise ValueError(
+                            f"callback {callback} not registered for topic {topic}")
                     else:
                         # Send none value to callback to unlock listener
                         try:
@@ -182,12 +185,11 @@ class Client:
                             self.client.unsubscribe(topic)
                             del self._listeners[topic]
 
-
     # ┌────────────────────────────────────────┐
     # │ Handy stuff                            │
     # └────────────────────────────────────────┘
 
-    #def retained_atts_get(self, topic: str, timeout=5):
+    # def retained_atts_get(self, topic: str, timeout=5):
     #    """
     #    Supposes atts last message have the retained flag
     #    Returns the raw payload
@@ -210,5 +212,3 @@ class Client:
 
     #    # Return value
     #    return payload
-
-
