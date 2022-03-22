@@ -1,13 +1,9 @@
-import time
 import json
 import paho.mqtt.client as mqtt
 
 class Core:
-    """ Core class
+    """Core object to share configuration data
     """
-
-    # Store mqtt clients
-    Clients = {}
 
     # Store aliases
     Aliases = {}
@@ -19,7 +15,7 @@ class Core:
     ###########################################################################
 
     def LoadAliases(connections=None, filepath=None):
-        """ Load aliases from connections or json file with connections
+        """Load aliases from connections or json file with connections
 
         Args:
             connections (dict, optional): Connections as declared as dict
@@ -53,14 +49,11 @@ class Core:
                 data = json.load(f)
                 Core.__LoadAliasesFromDict(data)
 
-        # # Reset clients
-        # Core.__ResetClients()
-
     ###########################################################################
     ###########################################################################
 
     def __LoadAliasesFromDict(connections):
-        """ Load aliases from a connections dict
+        """Load aliases from a connections dict
         """
         for co in connections:
             # Load connection
@@ -76,39 +69,10 @@ class Core:
                     "base_topic": connections[co]["interfaces"][it]
                 }
 
-    # ###########################################################################
-    # ###########################################################################
-
-    # def __ResetClients():
-    #     """ Create mqtt clients from connections data
-    #     """
-    #     for co in Core.Connections:
-    #         # Create the client
-    #         client = mqtt.Client(userdata=co)
-    #         client.on_message = Core.__on_message
-    #         client.connect(Core.Connections[co]["url"], Core.Connections[co]["port"])
-    #         client.loop_start()
-
-    #         # Store the client
-    #         Core.Clients[co] = {}
-    #         Core.Clients[co]["obj"] = client
-    #         Core.Clients[co]["interfaces"] = {}
-
-    # ###########################################################################
-    # ###########################################################################
-
-    # def __on_message(client, userdata, msg):
-    #     print("Connected with result code {msg.payload}", "\n")
-
-    #     co = userdata
-    #     print(userdata, "\n")
-    #     for it in Core.Clients[co]["interfaces"]:
-    #         it.on_mqtt_message(msg)
-
     ###########################################################################
     ###########################################################################
 
-    def GetClient(alias):
+    def BrokerInfoFromAlias(alias):
         """
         """
         # Get alias
@@ -120,17 +84,17 @@ class Core:
         if co not in Core.Connections.keys():
             raise Exception("Connection [" + co + "] not defined")
 
-        # Create the client
-        client = mqtt.Client(userdata=co)
-        client.connect(Core.Connections[co]["url"], Core.Connections[co]["port"])
+        # # Create the client
+        # client = mqtt.Client(userdata=co)
+        # client.connect(Core.Connections[co]["url"], Core.Connections[co]["port"])
 
         # Get the client
-        return client
+        return Core.Connections[co]["url"], Core.Connections[co]["port"]
 
     ###########################################################################
     ###########################################################################
 
-    def GetBaseTopic(alias):
+    def BaseTopicFromAlias(alias):
         """
         """
         # Get alias
@@ -139,13 +103,13 @@ class Core:
 
         return Core.Aliases[alias]["base_topic"]
 
-    ###########################################################################
-    ###########################################################################
+    # ###########################################################################
+    # ###########################################################################
 
-    def GetClientAndBaseTopic(alias):
-        """
-        """
-        return (Core.GetClient(alias), Core.GetBaseTopic(alias))
+    # def GetClientAndBaseTopic(alias):
+    #     """
+    #     """
+    #     return (Core.GetClient(alias), Core.GetBaseTopic(alias))
 
 
 
