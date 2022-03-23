@@ -9,13 +9,18 @@
 
 # from abc import ABC, abstractmethod
 
+import time
+from fnmatch import fnmatch
+
 import logging
 # import queue
 import threading
-import traceback
+# import traceback
 
 import json
+# from unittest import result
 import paho.mqtt.client as mqtt
+from pandas import array
 
 # from typing import Optional, Callable, Set
 # from dataclasses import dataclass, field
@@ -32,6 +37,7 @@ from .core import Core
 # ┌────────────────────────────────────────┐
 # │ Panduza client                         │
 # └────────────────────────────────────────┘
+
 
 class Client:
 
@@ -55,13 +61,13 @@ class Client:
         else:
             self.url = url
             self.port = port
-        
+
         # Set flags
         self.is_connected = False
 
         # Logs
-        self.log = logging.getLogger(f"Panduza {url}:{port}")
-        self.log.info("Init panduza connection")
+        self.log = logging.getLogger(f"pza.client:{url}:{port}")
+        self.log.info("Init Client")
 
         # Init MQTT client instance
         self.client = mqtt.Client()
@@ -103,11 +109,19 @@ class Client:
             f"Received MQTT message on topic '{message.topic}' with QOS {message.qos}")
 
         with self._listeners_lock:
-            if message.topic in self._listeners:
-                # Call all listener's callbacks
-                for callback in self._listeners[message.topic]:
-                    callback(message.payload)
 
+            for listener_topic in self._listeners:
+                l = self._listeners[listener_topic]
+
+                # self.log.debug(f">>> {listener_topic} check for {l['wildcard']}")
+
+                if fnmatch(message.topic, l["wildcard"]):
+                    # Call all listener's callbacks
+                    for callback in l["callbacks"]:
+                        # self.log.debug(f"- listener notified !")
+                        callback(message.topic, message.payload)
+
+                # self.log.error(f"Message recieved but no listner registered for this topic {message.topic}")
 
     # ┌────────────────────────────────────────┐
     # │ Publish wrapper                        │
@@ -132,20 +146,23 @@ class Client:
         """Registers the listener, returns the queue instance
         """
 
-        self.log.debug(f"Register listener for topic '{topic}'")
         with self._listeners_lock:
+            self.log.debug(f"Register listener for topic '{topic}'")
             # Create set if not existing for topic
             if not topic in self._listeners:
-                self._listeners[topic] = set()
+                self._listeners[topic] = {
+                    "wildcard": topic.replace("/+", "/*").replace("/#", "/*"),
+                    "callbacks": set()
+                }
                 self.client.subscribe(topic)
 
             # Check that callback is not already registered, and register
-            if callback in self._listeners[topic]:
+            if callback in self._listeners[topic]["callbacks"]:
                 raise ValueError(
                     f"callback {callback} already registered for topic {topic}")
 
             else:
-                self._listeners[topic].add(callback)
+                self._listeners[topic]["callbacks"].add(callback)
 
     def unsubscribe(self, topic: str, callback=None):
         """Unsuscribe listener from topic. if callback is None, unregister all listeners
@@ -153,37 +170,61 @@ class Client:
 
         self.log.debug(f"Unregister listener for topic '{topic}'")
 
-        with self._listeners_lock:
-            if topic in self._listeners:
-                if callback is None:
-                    for listener in self._listeners:
-                        # Send none value to callback to unlock listener
-                        try:
-                            listener(None)
-                        except:
-                            self.log.error(traceback.format_exc())
+        self.log.error(f"NEED IMPLEMENT")
 
-                    # Remove set from dict (hardcore mode)
-                    self.client.unsubscribe(topic)
-                    del self._listeners[topic]
+        # with self._listeners_lock:
+        #     if topic in self._listeners:
+        #         if callback is None:
+        #             for listener in self._listeners:
+        #                 # Send none value to callback to unlock listener
+        #                 try:
+        #                     listener(None)
+        #                 except:
+        #                     self.log.error(traceback.format_exc())
 
-                else:
-                    if not (callback in self._listeners[topic]):
-                        raise ValueError(
-                            f"callback {callback} not registered for topic {topic}")
-                    else:
-                        # Send none value to callback to unlock listener
-                        try:
-                            callback(None)
-                        except:
-                            self.log.error(traceback.format_exc())
+        #             # Remove set from dict (hardcore mode)
+        #             self.client.unsubscribe(topic)
+        #             del self._listeners[topic]
 
-                        self._listeners[topic].discard(callback)
+        #         else:
+        #             if not (callback in self._listeners[topic]):
+        #                 raise ValueError(
+        #                     f"callback {callback} not registered for topic {topic}")
+        #             else:
+        #                 # Send none value to callback to unlock listener
+        #                 try:
+        #                     callback(None)
+        #                 except:
+        #                     self.log.error(traceback.format_exc())
 
-                        # If set is empty, remove from dict
-                        if not self._listeners[topic]:
-                            self.client.unsubscribe(topic)
-                            del self._listeners[topic]
+        #                 self._listeners[topic].discard(callback)
+
+        #                 # If set is empty, remove from dict
+        #                 if not self._listeners[topic]:
+        #                     self.client.unsubscribe(topic)
+        #                     del self._listeners[topic]
+
+    def __store_scan_result(self, topic, payload):
+
+        # self.log.debug(f"Store {topic}")
+
+        base_topic = topic.removesuffix("/info")
+        info = json.loads(payload.decode("utf-8"))
+
+        if base_topic not in self.__results and fnmatch(info["type"], self.__type_filter):
+            self.__results[base_topic] = info
+
+    def scan_interfaces(self, type_filter="*"):
+        """Scan broker panduza interfaces and return them
+        """
+        self.__results = {}
+        self.__type_filter = type_filter
+
+        self.subscribe("pza/+/+/+/info", self.__store_scan_result)
+        time.sleep(4)
+        self.unsubscribe("pza/+/+/+/info")
+
+        return self.__results
 
     # ┌────────────────────────────────────────┐
     # │ Handy stuff                            │

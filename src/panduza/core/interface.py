@@ -3,6 +3,7 @@ import json
 import paho.mqtt.client as mqtt
 
 from .core import Core
+# from .client import Client
 from .heartbeat import HeartBeatMonitoring
 
 class Interface:
@@ -10,7 +11,7 @@ class Interface:
     ###########################################################################
     ###########################################################################
     
-    def __init__(self, alias=None, b_addr=None, b_port=None, b_topic=None):
+    def __init__(self, alias=None, b_addr=None, b_port=None, b_topic=None, pza_client=None):
         """ Constructor
         """
         #
@@ -20,6 +21,14 @@ class Interface:
             self.base_topic = b_topic
             self.client = mqtt.Client()
             self.client.connect(b_addr, b_port)
+
+        # If the client is already provided, use it
+        if pza_client:
+            pass
+
+        # Else create your client
+        else:
+            pass
 
         #
         self.heart_beat_monitoring = HeartBeatMonitoring(self.client, self.base_topic)
