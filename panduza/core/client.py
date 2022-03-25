@@ -9,6 +9,7 @@
 
 # from abc import ABC, abstractmethod
 
+from array import array
 import time
 from fnmatch import fnmatch
 
@@ -59,7 +60,8 @@ class Client:
         if broker_alias:
             self.url, self.port = Core.BrokerInfoFromBrokerAlias(broker_alias)
         elif interface_alias:
-            self.url, self.port = Core.BrokerInfoFromInterfaceAlias(interface_alias)
+            self.url, self.port = Core.BrokerInfoFromInterfaceAlias(
+                interface_alias)
         else:
             self.url = url
             self.port = port
@@ -68,7 +70,7 @@ class Client:
         self.is_connected = False
 
         # Logs
-        self.log = logging.getLogger(f"pza.client:{url}:{port}")
+        self.log = logging.getLogger(f"pza.client:{self.url}:{self.port}")
         self.log.info("Init Client")
 
         # Init MQTT client instance
@@ -122,7 +124,7 @@ class Client:
                     # Call all listener's callbacks
                     for callback in l["callbacks"]:
                         # self.log.debug(f"- listener notified !")
-                        callback(message.topic, message.payload)
+                        callback["cb"](message.topic, message.payload, **callback["kwargs"])
 
                 # self.log.error(f"Message recieved but no listner registered for this topic {message.topic}")
 
@@ -145,7 +147,7 @@ class Client:
     # │ Register/Unregister listener           │
     # └────────────────────────────────────────┘
 
-    def subscribe(self, topic: str, callback):
+    def subscribe(self, topic: str, callback, **kwargs):
         """Registers the listener, returns the queue instance
         """
 
@@ -155,7 +157,7 @@ class Client:
             if not topic in self._listeners:
                 self._listeners[topic] = {
                     "wildcard": topic.replace("/+", "/*").replace("/#", "/*"),
-                    "callbacks": set()
+                    "callbacks": []
                 }
                 self.client.subscribe(topic)
 
@@ -165,7 +167,8 @@ class Client:
                     f"callback {callback} already registered for topic {topic}")
 
             else:
-                self._listeners[topic]["callbacks"].add(callback)
+                self._listeners[topic]["callbacks"].append(
+                    {"cb": callback, "kwargs": kwargs})
 
     def unsubscribe(self, topic: str, callback=None):
         """Unsuscribe listener from topic. if callback is None, unregister all listeners
@@ -206,7 +209,6 @@ class Client:
         #                 if not self._listeners[topic]:
         #                     self.client.unsubscribe(topic)
         #                     del self._listeners[topic]
-
 
     def __store_scan_result(self, topic, payload):
 
