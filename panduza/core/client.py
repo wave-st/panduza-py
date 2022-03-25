@@ -15,12 +15,12 @@ from fnmatch import fnmatch
 import logging
 # import queue
 import threading
-# import traceback
+import traceback
 
 import json
 # from unittest import result
 import paho.mqtt.client as mqtt
-from pandas import array
+# from pandas import array
 
 # from typing import Optional, Callable, Set
 # from dataclasses import dataclass, field
@@ -41,7 +41,7 @@ from .core import Core
 
 class Client:
 
-    def __init__(self, alias=None, url=None, port=None):
+    def __init__(self, broker_alias=None, interface_alias=None, url=None, port=None):
         """Client Constructor
 
         The client can be build from
@@ -56,8 +56,10 @@ class Client:
             port (str, optional): port url. Defaults to None.
         """
         # Manage double way of loading client information
-        if alias:
-            self.url, self.port = Core.BrokerInfoFromBrokerAlias(alias)
+        if broker_alias:
+            self.url, self.port = Core.BrokerInfoFromBrokerAlias(broker_alias)
+        elif interface_alias:
+            self.url, self.port = Core.BrokerInfoFromInterfaceAlias(interface_alias)
         else:
             self.url = url
             self.port = port
@@ -85,7 +87,6 @@ class Client:
 
     def connect(self):
         self.log.debug("Connect to broker")
-
         self.client.connect(self.url, self.port)
         self.client.loop_start()
 
@@ -96,9 +97,11 @@ class Client:
 
     def __on_connect(self, client, userdata, flags, rc):
         self.is_connected = True
+        self.log.debug("Connected!")
 
     def __on_disconnect(self, client, userdata, rc):
         self.is_connected = False
+        self.log.debug("Disconnected!")
 
     # ┌────────────────────────────────────────┐
     # │ Message callback                       │
@@ -204,11 +207,12 @@ class Client:
         #                     self.client.unsubscribe(topic)
         #                     del self._listeners[topic]
 
+
     def __store_scan_result(self, topic, payload):
 
         # self.log.debug(f"Store {topic}")
 
-        base_topic = topic.removesuffix("/info")
+        base_topic = topic[:-len("/info")]
         info = json.loads(payload.decode("utf-8"))
 
         if base_topic not in self.__results and fnmatch(info["type"], self.__type_filter):

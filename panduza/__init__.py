@@ -1,8 +1,7 @@
-from .core.core import Core
-from .core.client import Client
-# from .core.interface import Interface
+from .core import Core
+from .core import Client
 
-# from .interfaces.io import Io
+from .interfaces import Io
 # from .interfaces.serial import Serial
 # from .interfaces.spi_master import SpiMaster
 # from .interfaces.spi_slave import  SpiSlave

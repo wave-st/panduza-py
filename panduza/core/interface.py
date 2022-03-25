@@ -3,7 +3,7 @@ import json
 import paho.mqtt.client as mqtt
 
 from .core import Core
-# from .client import Client
+from .client import Client
 from .heartbeat import HeartBeatMonitoring
 
 class Interface:
@@ -11,29 +11,55 @@ class Interface:
     ###########################################################################
     ###########################################################################
     
-    def __init__(self, alias=None, b_addr=None, b_port=None, b_topic=None, pza_client=None):
-        """ Constructor
+    def __init__(self, alias=None, url=None, port=None, b_topic=None, pza_client=None):
+        """Constructor
         """
+        self._initialized = False
+        self.init(alias, url, port, b_topic, pza_client)
+
+    ###########################################################################
+    ###########################################################################
+
+    def _post_initialization(self):
+        pass
+
+    ###########################################################################
+    ###########################################################################
+
+    def init(self, alias=None, url=None, port=None, b_topic=None, pza_client=None):
+        """Initialization of the interface
+        """
+        # Wait for later initialization
+        if alias==None and url==None and port==None and b_topic==None and pza_client==None:
+            return
+
         #
-        if alias:
-            self.client, self.base_topic = Core.GetClientAndBaseTopic(alias)
-        else:
-            self.base_topic = b_topic
-            self.client = mqtt.Client()
-            self.client.connect(b_addr, b_port)
+        if pza_client != None:
+            self.client = pza_client
 
-        # If the client is already provided, use it
-        if pza_client:
-            pass
-
-        # Else create your client
+        # Build a new client
         else:
-            pass
+            if alias:
+                self.client = Client(interface_alias=alias)
+                self.base_topic = Core.BaseTopicFromAlias(alias)
+            else:
+                self.base_topic = b_topic
+                self.client = Client(url=url, port=port)
+
+        # 
+        if not self.client.is_connected:
+            self.client.connect()
+
+        
+        # #
+        # self.heart_beat_monitoring = HeartBeatMonitoring(self.client, self.base_topic)
+        
+
+        # Initialization ok
+        self._initialized = True
 
         #
-        self.heart_beat_monitoring = HeartBeatMonitoring(self.client, self.base_topic)
-        self.client.on_message = self._on_mqtt_message
-        self.client.loop_start()
+        self._post_initialization()
 
     ###########################################################################
     ###########################################################################
