@@ -38,4 +38,3 @@ class Io(Interface):
             payload_parser  = lambda v: json.loads(v.decode("utf-8"))["direction"]
         )
 
-        pass

@@ -58,7 +58,7 @@ class Attribute_JSON(Attribute):
     # │ Update callback                        │
     # └────────────────────────────────────────┘
 
-    def __update(self, payload):
+    def __update(self, topic, payload):
         self.__log.debug("Received new value")
 
         if payload is None:
@@ -72,12 +72,12 @@ class Attribute_JSON(Attribute):
     # │ Trigger control                        │
     # └────────────────────────────────────────┘
     
-    # def trigger_arm(self):
-    #     self.__trigger.clear()
+    def trigger_arm(self):
+        self.__trigger.clear()
 
-    # def trigger_wait(self, timeout=5):
-    #     if not self.__trigger.wait(timeout=timeout):
-    #         raise RuntimeError(f"Timeout waiting for trigger for attribute {self.name} on {self.base_topic}")
+    def trigger_wait(self, timeout=5):
+        if not self.__trigger.wait(timeout=timeout):
+            raise RuntimeError(f"Timeout waiting for trigger for attribute {self.name} on {self.base_topic}")
 
 
     # ┌────────────────────────────────────────┐
@@ -88,15 +88,29 @@ class Attribute_JSON(Attribute):
         return self.__value
 
     def set(self, v, ensure=False):
-        # if ensure:
-        #     self.trigger_arm()
+        """Set the attribute
+
+        Args:
+            v (_type_): The new value
+            ensure (bool, optional): Set to true to wait for the confirmation that the command has been executed. Defaults to False.
+        """
+
+        retry=3
+        if ensure:
+            self.trigger_arm()
 
         self.client.publish(self._topic_cmds_set, self.payload_factory(v))
 
-        # if ensure:
-        #     self.trigger_wait(timeout=5)
+        if ensure:
+            # It is possible that you catch some initialization message with the previous dir value
+            # To manage this case, just wait for the correct value
+            while self.__value != v or not retry:
+                self.trigger_wait(timeout=3)
+                if self.__value != v:
+                    self.trigger_arm()
+                    retry-=1
 
-        #     if self.__value != v:
-        #         raise RuntimeError(f"Attribute {self.name} for {self.base_topic}: cannot set to {v}, got {self.__value}")
+            if self.__value != v:
+                raise RuntimeError(f"Attribute {self.name} for {self.base_topic}: cannot set to '{v}', got '{self.__value}'")
 
 

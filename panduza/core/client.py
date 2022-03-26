@@ -81,6 +81,15 @@ class Client:
 
         # Listeners
         self._listeners = dict()
+        """_listeners
+        {
+            topics: { wildcard: "string" , callbacks: [
+                { "cb":   "kwargs": }
+            ] }
+            ...
+        }
+        @todo: should be converted into a class....
+        """
         self._listeners_lock = threading.RLock()
 
     # ┌────────────────────────────────────────┐
@@ -124,6 +133,7 @@ class Client:
                     # Call all listener's callbacks
                     for callback in l["callbacks"]:
                         # self.log.debug(f"- listener notified !")
+
                         callback["cb"](message.topic, message.payload, **callback["kwargs"])
 
                 # self.log.error(f"Message recieved but no listner registered for this topic {message.topic}")
@@ -170,49 +180,71 @@ class Client:
                 self._listeners[topic]["callbacks"].append(
                     {"cb": callback, "kwargs": kwargs})
 
+
+    # ┌────────────────────────────────────────┐
+    # │                                        │
+    # └────────────────────────────────────────┘
+
+    def __unsubscribe_from_topic_only(self, topic: str):
+        if topic in self._listeners:
+            l = self._listeners[topic]
+
+            # Send none value to callbacks to unlock listener if needed
+            for callback in l["callbacks"]:
+                try:
+                    callback["cb"](None, None, **callback["kwargs"])
+                except:
+                    self.log.error(traceback.format_exc())
+
+            # Remove set from dict (hardcore mode)
+            self.client.unsubscribe(topic)
+            del self._listeners[topic]
+
+
+    def __unsubscribe_from_topic_and_callback(self, topic: str, callback):
+        if topic in self._listeners:
+            l = self._listeners[topic]
+
+            for c in l["callbacks"]:
+                if c["cb"] == callback:
+                    try:
+                        callback(None, None)
+                        l["callbacks"].remove(c)
+                    except:
+                        self.log.error(traceback.format_exc())
+                
+            # if no more callback, unsubscribe from mqtt topic and kill listener
+            if len(l["callbacks"]) == 0:
+                self.client.unsubscribe(topic)
+                del self._listeners[topic]
+
+    # ┌────────────────────────────────────────┐
+    # │                                        │
+    # └────────────────────────────────────────┘
+
     def unsubscribe(self, topic: str, callback=None):
         """Unsuscribe listener from topic. if callback is None, unregister all listeners
         """
 
         self.log.debug(f"Unregister listener for topic '{topic}'")
 
-        self.log.error(f"NEED IMPLEMENT")
+        with self._listeners_lock:
+            if callback is None:
+                self.__unsubscribe_from_topic_only(topic)
+            else:
+                self.__unsubscribe_from_topic_and_callback(topic, callback)
 
-        # with self._listeners_lock:
-        #     if topic in self._listeners:
-        #         if callback is None:
-        #             for listener in self._listeners:
-        #                 # Send none value to callback to unlock listener
-        #                 try:
-        #                     listener(None)
-        #                 except:
-        #                     self.log.error(traceback.format_exc())
 
-        #             # Remove set from dict (hardcore mode)
-        #             self.client.unsubscribe(topic)
-        #             del self._listeners[topic]
+    def listeners_number(self):
+        n = 0
+        with self._listeners_lock:
+            for l in self._listeners:
+                n += len(self._listeners[l]["callbacks"])
+        return n
 
-        #         else:
-        #             if not (callback in self._listeners[topic]):
-        #                 raise ValueError(
-        #                     f"callback {callback} not registered for topic {topic}")
-        #             else:
-        #                 # Send none value to callback to unlock listener
-        #                 try:
-        #                     callback(None)
-        #                 except:
-        #                     self.log.error(traceback.format_exc())
-
-        #                 self._listeners[topic].discard(callback)
-
-        #                 # If set is empty, remove from dict
-        #                 if not self._listeners[topic]:
-        #                     self.client.unsubscribe(topic)
-        #                     del self._listeners[topic]
 
     def __store_scan_result(self, topic, payload):
-
-        # self.log.debug(f"Store {topic}")
+        if topic == None: return
 
         base_topic = topic[:-len("/info")]
         info = json.loads(payload.decode("utf-8"))
