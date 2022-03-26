@@ -20,14 +20,14 @@ class Io(Interface):
 
     def _post_initialization(self):
         
-        # self.value     = Attribute_JSON(
-        #     conn            = self.conn,
-        #     prefix          = self.prefix,
-        #     name            = "value",
+        self.value     = Attribute_JSON(
+            client          = self.client,
+            base_topic      = self.base_topic,
+            name            = "value",
 
-        #     payload_factory = lambda v: json.dumps({"value": int(v)}).encode("utf-8"),
-        #     payload_parser  = lambda v: bool(json.loads(v.decode("utf-8"))["value"])
-        # )
+            payload_factory = lambda v: json.dumps({"value": int(v)}).encode("utf-8"),
+            payload_parser  = lambda v: bool(json.loads(v.decode("utf-8"))["value"])
+        )
 
         self.direction = Attribute_JSON(
             client          = self.client,

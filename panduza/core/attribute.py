@@ -51,8 +51,7 @@ class Attribute_JSON(Attribute):
 
     def __del__(self):
         # Unsubscribe from topic
-        # self.client.unsubscribe(self._topic_atts_get, callback=self.__update)
-        pass
+        self.client.unsubscribe(self._topic_atts_get, callback=self.__update)
 
     # ┌────────────────────────────────────────┐
     # │ Update callback                        │

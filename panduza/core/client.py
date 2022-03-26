@@ -9,22 +9,15 @@
 
 # from abc import ABC, abstractmethod
 
-from array import array
 import time
 from fnmatch import fnmatch
 
 import logging
-# import queue
 import threading
 import traceback
 
 import json
-# from unittest import result
 import paho.mqtt.client as mqtt
-# from pandas import array
-
-# from typing import Optional, Callable, Set
-# from dataclasses import dataclass, field
 
 from .core import Core
 
@@ -119,22 +112,24 @@ class Client:
     # └────────────────────────────────────────┘
 
     def __on_message(self, client, userdata, message):
-        self.log.debug(
-            f"Received MQTT message on topic '{message.topic}' with QOS {message.qos}")
+        """Callback triggered when mqtt data are recieved by the client
+        """
+        # Debug
+        self.log.debug(f"Rx topic({message.topic}) data({message.payload})")
 
+        #
         with self._listeners_lock:
 
             for listener_topic in self._listeners:
                 l = self._listeners[listener_topic]
-
-                # self.log.debug(f">>> {listener_topic} check for {l['wildcard']}")
 
                 if fnmatch(message.topic, l["wildcard"]):
                     # Call all listener's callbacks
                     for callback in l["callbacks"]:
                         # self.log.debug(f"- listener notified !")
 
-                        callback["cb"](message.topic, message.payload, **callback["kwargs"])
+                        callback["cb"](
+                            message.topic, message.payload, **callback["kwargs"])
 
                 # self.log.error(f"Message recieved but no listner registered for this topic {message.topic}")
 
@@ -180,7 +175,6 @@ class Client:
                 self._listeners[topic]["callbacks"].append(
                     {"cb": callback, "kwargs": kwargs})
 
-
     # ┌────────────────────────────────────────┐
     # │                                        │
     # └────────────────────────────────────────┘
@@ -200,7 +194,6 @@ class Client:
             self.client.unsubscribe(topic)
             del self._listeners[topic]
 
-
     def __unsubscribe_from_topic_and_callback(self, topic: str, callback):
         if topic in self._listeners:
             l = self._listeners[topic]
@@ -212,7 +205,7 @@ class Client:
                         l["callbacks"].remove(c)
                     except:
                         self.log.error(traceback.format_exc())
-                
+
             # if no more callback, unsubscribe from mqtt topic and kill listener
             if len(l["callbacks"]) == 0:
                 self.client.unsubscribe(topic)
@@ -234,7 +227,6 @@ class Client:
             else:
                 self.__unsubscribe_from_topic_and_callback(topic, callback)
 
-
     def listeners_number(self):
         n = 0
         with self._listeners_lock:
@@ -242,9 +234,9 @@ class Client:
                 n += len(self._listeners[l]["callbacks"])
         return n
 
-
     def __store_scan_result(self, topic, payload):
-        if topic == None: return
+        if topic == None:
+            return
 
         base_topic = topic[:-len("/info")]
         info = json.loads(payload.decode("utf-8"))
