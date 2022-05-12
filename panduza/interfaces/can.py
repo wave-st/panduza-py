@@ -6,24 +6,32 @@ import logging
 # Module logger
 mog = logging.getLogger("pza.pipe")
 
-class Serial:
+class Can:
 
     ###########################################################################
     ###########################################################################
     
-    def __init__(self, alias=None) -> None:
+    def __init__(self, alias=None):
         """
         """
-        self.client, self.baseTopic = Core.GetClientAndBaseTopic(alias)
+        self.client, self.base_topic = Core.GetClientAndBaseTopic(alias)
 
     ###########################################################################
     ###########################################################################
     
-    def write(self, data):
+    def write(self, id, payload):
         """
         """
-        mog.debug("Serial write > %s (%s)", self.baseTopic + "/cmds/data/send", data)
-        self.client.publish(self.baseTopic + "/cmds/data/send", data, qos=0, retain=False)
+        jsonFrame = {}
+        jsonFrame['type'] = 'msg'
+        jsonFrame['id'] = id
+        jsonFrame['length'] = len(payload)
+        jsonFrame['payload'] = []
+        for element in payload:
+            jsonFrame['payload'].append(element)
+        
+        mog.debug("Can write > %s (%s)", self.base_topic + "/cmds/msg", json.dumps(jsonFrame))
+        self.client.publish(self.base_topic + "/cmds/msg", json.dumps(jsonFrame), qos=0, retain=False)
 
     ###########################################################################
     ###########################################################################
@@ -43,7 +51,7 @@ class Serial:
             on_data(msg.payload)
 
         self.client.on_message = _on_message
-        self.client.subscribe(self.baseTopic + "/atts/data")
+        self.client.subscribe(self.base_topic + "/atts/msg")
         self.client.loop_start()
 
     ###########################################################################
@@ -53,8 +61,3 @@ class Serial:
         """
         """
         self.client.loop_stop()
-
-
-
-
-        

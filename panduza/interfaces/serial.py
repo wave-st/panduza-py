@@ -6,7 +6,7 @@ import logging
 # Module logger
 mog = logging.getLogger("pza.pipe")
 
-class Can:
+class Serial:
 
     ###########################################################################
     ###########################################################################
@@ -14,24 +14,16 @@ class Can:
     def __init__(self, alias=None) -> None:
         """
         """
-        self.client, self.baseTopic = Core.GetClientAndBaseTopic(alias)
+        self.client, self.base_topic = Core.GetClientAndBaseTopic(alias)
 
     ###########################################################################
     ###########################################################################
     
-    def write(self, id, payload):
+    def write(self, data):
         """
         """
-        jsonFrame = {}
-        jsonFrame['type'] = 'msg'
-        jsonFrame['id'] = id
-        jsonFrame['length'] = len(payload)
-        jsonFrame['payload'] = []
-        for element in payload:
-            jsonFrame['payload'].append(element)
-        
-        mog.debug("Can write > %s (%s)", self.baseTopic + "/cmds/msg", json.dumps(jsonFrame))
-        self.client.publish(self.baseTopic + "/cmds/msg", json.dumps(jsonFrame), qos=0, retain=False)
+        mog.debug("Serial write > %s (%s)", self.base_topic + "/cmds/data/send", data)
+        self.client.publish(self.base_topic + "/cmds/data/send", data, qos=0, retain=False)
 
     ###########################################################################
     ###########################################################################
@@ -51,7 +43,7 @@ class Can:
             on_data(msg.payload)
 
         self.client.on_message = _on_message
-        self.client.subscribe(self.baseTopic + "/atts/msg")
+        self.client.subscribe(self.base_topic + "/atts/data")
         self.client.loop_start()
 
     ###########################################################################
@@ -61,3 +53,8 @@ class Can:
         """
         """
         self.client.loop_stop()
+
+
+
+
+        
