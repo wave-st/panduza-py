@@ -20,7 +20,7 @@ setup(
         packages=find_packages(),
         cmdclass={'install': CustomInstallCommand},
 
-        # install_requires=['paho-mqtt'],
+        install_requires=['paho-mqtt'],
 
         classifiers= [
             "Development Status :: 3 - Alpha",

@@ -244,17 +244,29 @@ class Client:
         if base_topic not in self.__results and fnmatch(info["type"], self.__type_filter):
             self.__results[base_topic] = info
 
+    ###########################################################################
+    ###########################################################################
+
     def scan_interfaces(self, type_filter="*"):
         """Scan broker panduza interfaces and return them
         """
+        # Init
         self.__results = {}
         self.__type_filter = type_filter
 
+        # Subscribe to interfaces info responses
         self.subscribe("pza/+/+/+/info", self.__store_scan_result)
-        time.sleep(4)
-        self.unsubscribe("pza/+/+/+/info")
 
+        # Send the global discovery request and wait for answers
+        self.client.publish("pza", u"*", qos=0, retain=False)
+        time.sleep(4)
+
+        # cleanup and return
+        self.unsubscribe("pza/+/+/+/info")
         return self.__results
+
+    ###########################################################################
+    ###########################################################################
 
     # ┌────────────────────────────────────────┐
     # │ Handy stuff                            │

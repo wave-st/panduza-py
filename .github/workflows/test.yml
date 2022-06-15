@@ -1,0 +1,27 @@
+name: Action to test the Python client
+on: [push]
+jobs:
+  Tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v2
+
+      - name: Start Mosquitto
+        uses: namoshek/mosquitto-github-action@v1
+        with:
+          version: '1.6'
+          ports: '1883:1883'
+          container-name: 'mqtt'
+
+      - run: sudo apt-get install python3 python3-pip
+      - run: pip install git+https://github.com/behave/behave
+      - run: pip install PyHamcrest
+      - run: pip install coverage
+      - run: pip install paho-mqtt
+      - run: export PYTHONPATH=`$pwd`
+
+      - run: coverage run --source='panduza' -m behave
+      - run: coverage report -m
+      - run: echo "🎉 Test finished !"
+

@@ -3,6 +3,9 @@ import logging
 from ..core import Interface
 from ..core import Attribute_JSON
 
+# ┌────────────────────────────────────────┐
+# │ Core                                   │
+# └────────────────────────────────────────┘
 
 class Io(Interface):
 
@@ -14,11 +17,12 @@ class Io(Interface):
         """
         super().__init__(alias, url, port, b_topic, pza_client)
 
-
     ###########################################################################
     ###########################################################################
 
     def _post_initialization(self):
+        """Initialize attributes
+        """
         
         self.value     = Attribute_JSON(
             client          = self.client,
