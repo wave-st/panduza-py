@@ -138,15 +138,21 @@ class Client:
     # └────────────────────────────────────────┘
 
     def publish(self, topic, payload: bytes, qos=0):
+        """Helper to publish raw messages
+        """
         self.log.debug(f"Publish to topic {topic} with QOS={qos}: {payload}")
-        self.client.publish(topic, payload, qos=qos, retain=False)
+        request = self.client.publish(topic, payload, qos=qos, retain=False)
+        request.wait_for_publish()
 
     def publish_json(self, topic, req: dict, qos=0):
-        self.publish(
+        """Helper to publish json messages
+        """
+        request = self.publish(
             topic=topic,
             payload=json.dumps(req).encode("utf-8"),
             qos=qos
         )
+        request.wait_for_publish()
 
     # ┌────────────────────────────────────────┐
     # │ Register/Unregister listener           │
