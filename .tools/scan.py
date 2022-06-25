@@ -12,8 +12,7 @@ Core.LoadAliases({
 })
 
 client = Client(broker_alias="local")
-
-
+client.connect()
 interfaces = client.scan_interfaces()
 
 print(f"interfaces => {interfaces}")

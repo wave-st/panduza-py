@@ -264,7 +264,7 @@ class Client:
         self.subscribe("pza/+/+/+/info", self.__store_scan_result)
 
         # Send the global discovery request and wait for answers
-        self.client.publish("pza", u"*", qos=0, retain=False)
+        self.publish("pza", u"*", qos=0)
         time.sleep(4)
 
         # cleanup and return
