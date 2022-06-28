@@ -36,6 +36,8 @@ jobs:
         working-directory: panduza-py-platform
         env:
           PYTHONPATH: ".."
+          COVERAGE_PROCESS_START: "/__w/panduza-py/panduza-py/.coveragerc"
+
 
       - run: echo "`ls -la ${GITHUB_WORKSPACE}`"
 
@@ -50,7 +52,7 @@ jobs:
         working-directory: panduza-py-platform
         env:
           PYTHONPATH: ".."
-          COVERAGE_PROCESS_START: "${GITHUB_WORKSPACE}/.coveragerc"
+          COVERAGE_PROCESS_START: "/__w/panduza-py/panduza-py/.coveragerc"
 
 
       - name: Coverage Report to html
