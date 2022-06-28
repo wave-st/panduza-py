@@ -1,27 +1,71 @@
 name: Action to test the Python client
 on: [push]
+
+env:
+  PLATFORM_PY_BRANCH: subprocess_test_platform
+
 jobs:
   Tests:
     runs-on: ubuntu-latest
+    container: ubuntu:20.04
     steps:
       - name: Git checkout
         uses: actions/checkout@v2
 
-      - name: Start Mosquitto
-        uses: namoshek/mosquitto-github-action@v1
-        with:
-          version: '1.6'
-          ports: '1883:1883'
-          container-name: 'mqtt'
+      - run: echo "${GITHUB_WORKSPACE}"
 
-      - run: sudo apt-get install python3 python3-pip
+      - run: apt-get update
+      - run: apt-get install -y mosquitto git
+
+      - run: apt-get install -y python3 python3-pip
       - run: pip install git+https://github.com/behave/behave
-      - run: pip install PyHamcrest
-      - run: pip install coverage
-      - run: pip install paho-mqtt
-      - run: export PYTHONPATH=`$pwd`
+      - run: pip install PyHamcrest coverage loguru
+      - run: pip install behave-html-formatter
 
-      - run: coverage run --source='panduza' -m behave
-      - run: coverage report -m
+      - run: git clone --branch  $PLATFORM_PY_BRANCH  https://github.com/Panduza/panduza-py-platform
+      - run: pip install git+https://github.com/Panduza/panduza-py-platform@$PLATFORM_PY_BRANCH
+
+      - run: mosquitto -d
+
+      - name: Debug
+        run: echo "`ls -la ${GITHUB_WORKSPACE}`"
+
+
+      - name: Execute tests
+        run: coverage run --source='../panduza' -m behave
+        working-directory: panduza-py-platform
+        env:
+          PYTHONPATH: ".."
+          COVERAGE_PROCESS_START: "${GITHUB_WORKSPACE}/.coveragerc"
+
+
+      - run: echo "`ls -la ${GITHUB_WORKSPACE}`"
+
+
+      - name: Covergae Report
+        run: coverage report
+        working-directory: panduza-py-platform
+
+
+      - name: Execute tests to html
+        run: behave -f html -o test_reports/test.html
+        working-directory: panduza-py-platform
+        env:
+          PYTHONPATH: ".."
+          COVERAGE_PROCESS_START: "${GITHUB_WORKSPACE}/.coveragerc"
+
+
+      - name: Coverage Report to html
+        run: coverage html -d test_reports/coverage
+        working-directory: panduza-py-platform
+
+
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test_reports
+          path: panduza-py-platform/test_reports
+
+
       - run: echo "🎉 Test finished !"
 
