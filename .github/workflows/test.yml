@@ -47,17 +47,17 @@ jobs:
         working-directory: panduza-py-platform
 
 
-      # - name: Execute tests to html
-      #   run: behave -f html -o test_reports/test.html
-      #   working-directory: panduza-py-platform
-      #   env:
-      #     PYTHONPATH: ".."
-      #     COVERAGE_PROCESS_START: "/__w/panduza-py/panduza-py/.coveragerc"
+      - name: Execute tests to html
+        run: coverage run --source='../panduza' -m behave -f html -o test_reports/test.html
+        working-directory: panduza-py-platform
+        env:
+          PYTHONPATH: ".."
+          COVERAGE_PROCESS_START: "NO"
 
 
-      # - name: Coverage Report to html
-      #   run: coverage html -d test_reports/coverage
-      #   working-directory: panduza-py-platform
+      - name: Coverage Report to html
+        run: coverage html -d test_reports/coverage
+        working-directory: panduza-py-platform
 
 
       - uses: actions/upload-artifact@v3
