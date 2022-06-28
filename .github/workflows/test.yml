@@ -35,9 +35,7 @@ jobs:
         run: coverage run --source='../panduza' -m behave
         working-directory: panduza-py-platform
         env:
-          PYTHONPATH: "${GITHUB_WORKSPACE}/."
-          COVERAGE_PROCESS_START: "${GITHUB_WORKSPACE}/.coveragerc"
-
+          PYTHONPATH: ".."
 
       - run: echo "`ls -la ${GITHUB_WORKSPACE}`"
 
